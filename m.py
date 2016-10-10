@@ -17,6 +17,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 
 logging.basicConfig(filename='mfw.log', filemode='a', level=logging.DEBUG, format='[%(asctime)s]\t%(message)s', datefmt="%Y/%m/%d %H:%M:%S")
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 h = {"Accept-Encoding": "gzip, deflate, sdch", "user_agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"}
 a = "mfw_uuid=57c53eda-942b-0361-4849-98a78362c803; __mfwurd=a%3A3%3A%7Bs%3A6%3A%22f_time%22%3Bi%3A1472544475%3Bs%3A9%3A%22f_rdomain%22%3Bs%3A0%3A%22%22%3Bs%3A6%3A%22f_host%22%3Bs%3A3%3A%22www%22%3B%7D; __mfwuuid=57c53eda-942b-0361-4849-98a78362c803; _r=google; _rp=a%3A2%3A%7Bs%3A1%3A%22p%22%3Bs%3A15%3A%22www.google.com%2F%22%3Bs%3A1%3A%22t%22%3Bi%3A1472545422%3B%7D; oad_n=a%3A3%3A%7Bs%3A3%3A%22oid%22%3Bi%3A1029%3Bs%3A2%3A%22dm%22%3Bs%3A15%3A%22www.mafengwo.cn%22%3Bs%3A2%3A%22ft%22%3Bs%3A19%3A%222016-10-08+17%3A52%3A09%22%3B%7D; PHPSESSID=pi9isl7ue6h991l669f17ki885; __mfwlv=1476067280; __mfwvn=6; __mfwlt=1476067280; CNZZDATA30065558=cnzz_eid%3D1345273616-1472543737-%26ntime%3D1476065044; uva=a%3A5%3A%7Bs%3A2%3A%22lt%22%3Bi%3A1476067280%3Bs%3A10%3A%22last_refer%22%3Bs%3A6%3A%22direct%22%3Bs%3A5%3A%22rhost%22%3Bs%3A0%3A%22%22%3Bs%3A4%3A%22step%22%3Bi%3A73%3Bs%3A13%3A%22host_pre_time%22%3Bs%3A10%3A%222016-08-30%22%3B%7D"
@@ -54,7 +55,7 @@ def get_poi(pid = '12871'):
     print e
     return None
 
-def get_poi_images(poi_id, page_num = 1):
+def get_poi_images(poi_id, page_num = 100):
   url = "http://www.mafengwo.cn/mdd/ajax_photolist.php?act=getPoiPhotoList&poiid=%s&page=%s"
   album = []
   for i in range(1, page_num + 1):
@@ -128,7 +129,7 @@ def _get_album(url):
     return []
   return imgs
 
-def main(out = './data', cache = True):
+def go(out = './data', cache = True):
   if not os.path.isdir(out):
     os.mkdir(out)
   city_file = "%s/%s" % (out, "city.json")
@@ -159,10 +160,12 @@ def main(out = './data', cache = True):
     r = pool.map(get_poi, cids)
     pool.close() 
     pool.join()
+    logging.info("Write %s" % (poi_file))
     with open(poi_file, "w") as f:
       f.write(json.dumps(r))
   else:
     action = "Read"
+    logging.info("Read %s" % (poi_file))
     with open(poi_file, "r") as f:
       r = json.loads(f.read())
 
@@ -174,15 +177,24 @@ def main(out = './data', cache = True):
       if not os.path.isdir(poi_dir):
         logging.info("Create dir for poi %s %s" % (poi_name, poi_dir))
         os.mkdir(poi_dir)
-      intro = get_poi_intro(poi_id)
-      with open(poi_dir + "/intro.json", "w") as f:
-        logging.info("Write intro for poi %s %s" % (poi_name, poi_dir))
-        f.write(json.dumps(intro))
-      images = get_poi_images(poi_id)
-      with open(poi_dir + "/images.json", "w") as f:
-        logging.info("Write iamges for poi %s %s" % (poi_name, poi_dir))
-        f.write(json.dumps(images))
+      intro_file = poi_dir + "/intro.json"
+      if not os.path.isfile(intro_file) or 0 == os.path.getsize(intro_file):
+        intro = get_poi_intro(poi_id)
+        with open(intro_file, "w") as f:
+          logging.info("Write intro for poi %s %s" % (poi_name, poi_dir))
+          f.write(json.dumps(intro))
+      else:
+        logging.info("Skip intro for poi %s %s" % (poi_name, poi_dir))
+
+      images_file  = poi_dir + "/images.json"
+      if not os.path.isfile(images_file) or 0 == os.path.getsize(images_file):
+        images = get_poi_images(poi_id)
+        with open(images_file, "w") as f:
+          logging.info("Write iamges for poi %s %s" % (poi_name, poi_dir))
+          f.write(json.dumps(images))
+      else:
+        logging.info("Skip images for poi %s %s" % (poi_name, poi_dir))
       
 if __name__ == "__main__":
-  main()
+  go()
 
