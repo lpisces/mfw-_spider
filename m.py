@@ -39,7 +39,7 @@ def get_city():
   except:
     return None
 
-def get_poi(pid = '12871'):
+def get_poi(pid = 0):
   logging.info("Get poi in city %s" % (pid, ))
   url = "http://www.mafengwo.cn/jd/%s/gonglve.html" % (pid, )
   try:
@@ -55,10 +55,11 @@ def get_poi(pid = '12871'):
     print e
     return None
 
-def get_poi_images(poi_id, page_num = 100):
+def get_poi_images(poi_id, page_num = 10):
   url = "http://www.mafengwo.cn/mdd/ajax_photolist.php?act=getPoiPhotoList&poiid=%s&page=%s"
   album = []
   for i in range(1, page_num + 1):
+    logging.info("Get images from poi %s, page %s" % (poi_id, i))
     try:
       u = url % (poi_id, i)
       r = requests.get(u, headers = h)
@@ -75,6 +76,7 @@ def get_poi_images(poi_id, page_num = 100):
   pool.join()
   for img in r:
     imgs += img
+  logging.info("Got %s images" % (len(imgs), ))
   return imgs
 
 def get_poi_intro(poi_id):
