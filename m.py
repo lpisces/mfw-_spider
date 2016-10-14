@@ -55,7 +55,7 @@ def get_poi(pid = 0):
     print e
     return None
 
-def get_poi_images(poi_id, page_num = 10):
+def get_poi_images(poi_id, page_num = 1):
   url = "http://www.mafengwo.cn/mdd/ajax_photolist.php?act=getPoiPhotoList&poiid=%s&page=%s"
   album = []
   for i in range(1, page_num + 1):
@@ -67,10 +67,11 @@ def get_poi_images(poi_id, page_num = 10):
       c = soup.select(".cover")
       for a in c:
         album.append("http://www.mafengwo.cn" + a["href"])
+	break
     except Exception as e:
       continue
   imgs = []
-  pool = ThreadPool(8)
+  pool = ThreadPool(2)
   r = pool.map(_get_album, album)
   pool.close() 
   pool.join()
@@ -158,7 +159,7 @@ def go(out = './data', cache = True):
   poi_file = "%s/%s" % (out, "poi.json")
   if not os.path.isfile(poi_file) or cache == False:
     action = "Write"
-    pool = ThreadPool(8)
+    pool = ThreadPool(2)
     r = pool.map(get_poi, cids)
     pool.close() 
     pool.join()
